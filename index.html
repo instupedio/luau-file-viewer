@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luau Mobile Checker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <style>
+        body { font-family: system-ui; background: #111; color: #ddd; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: auto; }
+        #drop-zone { border: 3px dashed #666; padding: 60px; text-align: center; border-radius: 12px; cursor: pointer; }
+        #drop-zone.dragover { background: #222; border-color: #0f0; }
+        pre { background: #1e1e1e; padding: 15px; overflow: auto; max-height: 70vh; border-radius: 8px; }
+        button { padding: 12px 24px; background: #00bfff; color: white; border: none; border-radius: 6px; margin: 10px; cursor: pointer; }
+        textarea { width: 100%; height: 300px; background: #222; color: #ddd; border: 1px solid #444; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 Luau / Lua Mobile File Checker</h1>
+        <p>Upload .lua or .luau files to view with syntax highlight + basic checks on mobile.</p>
+        
+        <div id="drop-zone">
+            <p>Drop file here or click to upload</p>
+            <input type="file" id="file-input" accept=".lua,.luau" style="display:none;">
+        </div>
+        
+        <div id="file-info"></div>
+        
+        <h2>Raw Edit</h2>
+        <textarea id="editor" spellcheck="false"></textarea>
+        
+        <button onclick="checkSyntax()">Run Basic Check</button>
+        <button onclick="downloadFile()">Download Edited</button>
+        
+        <h2>Highlighted Preview</h2>
+        <pre id="preview"><code id="code-block" class="language-lua"></code></pre>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const editor = document.getElementById('editor');
+        const previewCode = document.getElementById('code-block');
+        const fileInfo = document.getElementById('file-info');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFile);
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFile(e.dataTransfer.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target.result;
+                editor.value = content;
+                fileInfo.innerHTML = `<p>File: ${file.name} | Size: ${(file.size/1024).toFixed(1)} KB</p>`;
+                updatePreview(content);
+            };
+            reader.readAsText(file);
+        }
+
+        function updatePreview(content) {
+            previewCode.textContent = content;
+            Prism.highlightElement(previewCode);
+        }
+
+        function checkSyntax() {
+            const code = editor.value;
+            // Basic strategic checks - expand this heavy
+            let issues = [];
+            if ((code.match(/if/g) || []).length !== (code.match(/end/g) || []).length) issues.push("Mismatched if/end");
+            if (code.includes("local") && !code.includes("function")) issues.push("Check local vars");
+            alert(issues.length ? "Issues found:\n" + issues.join("\n") : "Looks clean! No obvious syntax breaks.");
+            updatePreview(code);
+        }
+
+        function downloadFile() {
+            const blob = new Blob([editor.value], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'edited.luau';
+            a.click();
+        }
+
+        // Auto update preview while typing
+        editor.addEventListener('input', () => updatePreview(editor.value));
+    </script>
+</body>
+</html>
